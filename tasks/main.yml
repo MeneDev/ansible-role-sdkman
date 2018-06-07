@@ -1,0 +1,29 @@
+---
+- name: Install sdkman
+  become: no
+  shell: curl -s "https://get.sdkman.io" | bash
+  register: command_result
+  changed_when: "not 'You already have SDKMAN installed' in command_result.stdout"
+
+- name: Fix permission
+  file:
+    path: "{{ ansible_env.HOME }}/.sdkman/bin/sdkman-init.sh"
+    mode: "+x"
+
+- name: Install specific sdk version
+  become: no
+  shell: "source {{ ansible_env.HOME }}/.sdkman/bin/sdkman-init.sh && sdk install {{ item.key | quote }} {{ item.value | quote }}"
+  when: item.value != 'latest'
+  register: command_result
+  failed_when: "'is not available' in command_result.stdout"
+  changed_when: "not 'is already installed' in command_result.stdout"
+  with_dict: "{{ packages }}"
+
+- name: Install latest sdk version
+  become: no
+  shell: source {{ ansible_env.HOME }}/.sdkman/bin/sdkman-init.sh && sdk install {{ item.key | quote }}
+  when: item.value == 'latest'
+  register: command_result
+  failed_when: "'is not available' in command_result.stdout"
+  changed_when: "not 'is already installed' in command_result.stdout"
+  with_dict: "{{ packages }}"
